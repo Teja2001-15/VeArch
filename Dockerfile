@@ -4,7 +4,7 @@
 #  Stage 2: Minimal Alpine runtime image
 # ════════════════════════════════════════════════════════════
 
-FROM golang:1.22-alpine AS builder
+FROM golang:alpine AS builder
 
 WORKDIR /app
 
