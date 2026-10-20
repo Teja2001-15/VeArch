@@ -1,0 +1,308 @@
+{{template "base" .}}
+
+{{define "content"}}
+{{$user := .CurrentUser}}
+{{$task := .Task}}
+{{$project := .Project}}
+
+{{$canEditCore := or (eq $user.Role "admin") (eq $user.Role "senior_architect")}}
+{{$canEditMeta := eq $user.Role "junior_architect"}}
+
+<div class="page-header">
+  <div>
+    <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+      <a href="/projects" class="text-xs text-muted">Projects</a>
+      <span class="text-xs text-muted">/</span>
+      <a href="/projects/{{$project.ID.Hex}}" class="text-xs text-muted">{{$project.ProjectName}}</a>
+      <span class="text-xs text-muted">/</span>
+      <span class="text-xs text-muted">Task</span>
+    </div>
+    <h1 class="page-title" style="font-size:1.25rem;">{{$task.Title}}</h1>
+  </div>
+  <a href="/projects/{{$project.ID.Hex}}" class="btn btn-secondary btn-sm" id="back-to-board-btn">
+    ← Back to Board
+  </a>
+</div>
+
+{{if .Error}}   <div class="alert alert-error"   id="task-error">{{.Error}}</div>{{end}}
+{{if .Success}} <div class="alert alert-success" id="task-success">{{if eq .Success "task forwarded"}}Task forwarded successfully.{{else}}Task updated successfully.{{end}}</div>{{end}}
+
+<div class="task-detail-layout">
+  <!-- Main: Edit Form + Comments -->
+  <div class="task-detail-main">
+    <div class="card">
+      <h3 style="margin-bottom:16px;">Task Details</h3>
+      <form method="POST" action="/tasks/{{$task.ID.Hex}}/update" id="task-update-form">
+
+        <!-- Title — editable only by admin/senior -->
+        <div class="form-group">
+          <label class="form-label" for="task-title-input">Title</label>
+          <input id="task-title-input" name="title" type="text" class="form-control" value="{{$task.Title}}"
+            {{if not $canEditCore}}readonly{{end}}>
+          {{if not $canEditCore}}<p class="text-xs text-muted" style="margin-top:4px;">Only admins and senior architects can edit the title.</p>{{end}}
+        </div>
+
+        <!-- Description — editable only by admin/senior -->
+        <div class="form-group">
+          <label class="form-label" for="task-desc-input">Description</label>
+          <textarea id="task-desc-input" name="description" class="form-control" rows="4"
+            {{if not $canEditCore}}readonly{{end}}>{{$task.Description}}</textarea>
+          {{if not $canEditCore}}<p class="text-xs text-muted" style="margin-top:4px;">Only admins and senior architects can edit the description.</p>{{end}}
+        </div>
+
+        <!-- Severity — editable by admin, senior, junior -->
+        <div class="form-group">
+          <label class="form-label" for="task-severity-input">Severity</label>
+          <select id="task-severity-input" name="severity" class="form-control"
+            {{if and (not $canEditCore) (not $canEditMeta)}}disabled{{end}}>
+            {{range .SeverityLevels}}
+            <option value="{{.}}" {{if eq . $task.Severity}}selected{{end}}>
+              {{if eq . "low"}}🟢{{else if eq . "medium"}}🟡{{else if eq . "high"}}🟠{{else}}🔴{{end}} {{.SeverityDisplayName}}
+            </option>
+            {{end}}
+          </select>
+        </div>
+
+        <!-- Assignee — editable only by admin/senior -->
+        <div class="form-group">
+          <label class="form-label" for="task-assignee-input">Assignee</label>
+          <select id="task-assignee-input" name="assignee_id" class="form-control"
+            {{if not $canEditCore}}disabled{{end}}>
+            <option value="">— Unassigned —</option>
+            {{range .AllUsers}}
+            <option value="{{.ID.Hex}}" {{if eq .ID $task.AssigneeID}}selected{{end}}>
+              {{.Name}} ({{.Role.RoleDisplayName}})
+            </option>
+            {{end}}
+          </select>
+        </div>
+
+        <!-- Deadline — editable by admin, senior, junior -->
+        <div class="form-group">
+          <label class="form-label" for="task-deadline-input">Deadline</label>
+          <input id="task-deadline-input" name="deadline" type="date" class="form-control"
+            {{if $task.Deadline}}value="{{$task.Deadline.Format "2006-01-02"}}"{{end}}
+            {{if and (not $canEditCore) (not $canEditMeta)}}readonly{{end}}>
+        </div>
+
+        <!-- GDrive File Links — editable by admin, senior, junior -->
+        <div class="form-group">
+          <label class="form-label">Google Drive File Links</label>
+          <div id="task-gdrive-links" style="display:flex; flex-direction:column; gap:8px;">
+            {{range $task.GDriveFileLinks}}
+            <div style="display:grid; grid-template-columns:1fr auto; gap:8px;">
+              <input type="url" name="gdrive_file_links" class="form-control" value="{{.}}" placeholder="https://drive.google.com/..."
+                {{if and (not $canEditCore) (not $canEditMeta)}}readonly{{end}}>
+              {{if or $canEditCore $canEditMeta}}
+              <button type="button" class="btn btn-ghost btn-sm" onclick="this.closest('div').remove()">✕</button>
+              {{end}}
+            </div>
+            {{end}}
+          </div>
+          {{if or $canEditCore $canEditMeta}}
+          <button type="button" class="btn btn-ghost btn-sm" style="margin-top:8px;" id="add-task-gdrive-btn" onclick="addTaskGDriveLink()">+ Add File Link</button>
+          {{end}}
+        </div>
+
+        {{if or $canEditCore $canEditMeta}}
+        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:8px;">
+          <button type="submit" class="btn btn-primary" id="task-update-submit-btn">Save Changes</button>
+        </div>
+        {{end}}
+      </form>
+    </div>
+
+    <!-- Activity Log -->
+    <div class="card">
+      <h3 style="margin-bottom:16px;">Activity Log</h3>
+      {{if $task.ActivityLog}}
+      <div class="activity-log">
+        {{range $task.ActivityLog}}
+        <div class="log-entry">
+          <div class="log-dot"></div>
+          <div style="flex:1;">
+            <span class="log-actor">{{.ActorName}}</span>
+            <span class="log-action"> {{.Action}}</span>
+          </div>
+          <div class="log-time">{{.Timestamp.Format "Jan 2, 15:04"}}</div>
+        </div>
+        {{end}}
+      </div>
+      {{else}}
+      <p class="text-sm text-muted">No activity yet.</p>
+      {{end}}
+    </div>
+
+    <!-- Comments -->
+    <div class="card" id="comments">
+      <h3 style="margin-bottom:16px; display:flex; align-items:center; gap:8px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Comments
+        {{if $task.Comments}}<span class="column-count">{{len $task.Comments}}</span>{{end}}
+      </h3>
+
+      {{if $task.Comments}}
+      <div style="display:flex; flex-direction:column; gap:16px; margin-bottom:20px;">
+        {{range $task.Comments}}
+        <div class="chat-message" id="comment-{{.ID.Hex}}">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+            <div class="user-avatar" style="width:28px;height:28px;font-size:0.75rem;">{{slice .AuthorName 0 1}}</div>
+            <span style="font-weight:600;font-size:0.8125rem;">{{.AuthorName}}</span>
+            <span class="text-xs text-muted">{{.Timestamp.Format "Jan 2, 2006 · 15:04"}}</span>
+          </div>
+          <div style="margin-left:36px;font-size:0.875rem;line-height:1.6;color:var(--text-primary);background:var(--bg-hover);border-radius:var(--radius-md);padding:10px 14px;">{{.Body}}</div>
+        </div>
+        {{end}}
+      </div>
+      {{else}}
+      <p class="text-sm text-muted" style="margin-bottom:16px;">No comments yet. Be the first to comment.</p>
+      {{end}}
+
+      <!-- Post comment -->
+      <form method="POST" action="/tasks/{{$task.ID.Hex}}/comment" id="task-comment-form">
+        <div class="form-group" style="margin-bottom:8px;">
+          <textarea name="body" id="task-comment-input" class="form-control" rows="3"
+            placeholder="Write a comment… (Shift+Enter for new line, Enter to submit)"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();this.closest('form').submit();}"></textarea>
+        </div>
+        <div style="display:flex;justify-content:flex-end;">
+          <button type="submit" class="btn btn-primary btn-sm" id="post-comment-btn">Post Comment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Aside: Status & Metadata -->
+  <div class="task-detail-aside">
+
+    <!-- Status + Transitions -->
+    <div class="card">
+      <h3 style="font-size:0.875rem; margin-bottom:12px; color:var(--text-muted);">STATUS</h3>
+      <span class="badge badge-{{$task.Status.StatusClass}}" style="font-size:0.8125rem; padding:5px 14px; display:inline-block; margin-bottom:12px;">
+        {{$task.Status.StatusDisplayName}}
+      </span>
+
+      {{if .NextStatuses}}
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
+        {{range .NextStatuses}}
+        <form method="POST" action="/tasks/{{$task.ID.Hex}}/move" style="margin:0;">
+          <input type="hidden" name="status" value="{{.}}">
+          <button type="submit" class="btn btn-secondary btn-sm w-full" style="text-align:left;justify-content:flex-start;gap:6px;" id="move-to-{{.StatusClass}}-btn">
+            {{if eq . "in_progress"}}▶ Mark In Progress
+            {{else if eq . "needs_approval"}}➡ Forward for Review
+            {{else if eq . "done"}}{{if $.IsAssignee}}✅ Mark Task Complete{{else}}✅ Approve & Done{{end}}
+            {{else if eq . "todo"}}↩ Reopen (To-Do)
+            {{end}}
+          </button>
+        </form>
+        {{end}}
+      </div>
+      {{end}}
+    </div>
+
+    {{if .CanForward}}
+    <div class="card">
+      <h3 style="font-size:0.875rem; margin-bottom:8px; color:var(--text-muted);">FORWARD TASK</h3>
+      <p class="text-xs text-muted" style="margin-bottom:12px;">Hand this task to another team member.</p>
+      <form method="POST" action="/tasks/{{$task.ID.Hex}}/forward" id="forward-task-form" style="display:flex; flex-direction:column; gap:8px;">
+        <label class="form-label" for="forward-assignee">Forward to</label>
+        <select id="forward-assignee" name="assignee_id" class="form-control" required>
+          <option value="">Select a team member</option>
+          {{range .AllUsers}}
+          {{if ne .ID $task.AssigneeID}}<option value="{{.ID.Hex}}">{{.Name}} ({{.Role.RoleDisplayName}})</option>{{end}}
+          {{end}}
+        </select>
+        <button type="submit" class="btn btn-secondary btn-sm w-full">Forward Task</button>
+      </form>
+    </div>
+    {{end}}
+
+    <!-- Severity indicator -->
+    <div class="card">
+      <h3 style="font-size:0.875rem; margin-bottom:12px; color:var(--text-muted);">SEVERITY</h3>
+      <span class="badge badge-severity-{{$task.Severity.SeverityClass}}" style="font-size:0.8125rem; padding:5px 14px;">
+        {{if eq $task.Severity "low"}}🟢{{else if eq $task.Severity "medium"}}🟡{{else if eq $task.Severity "high"}}🟠{{else}}🔴{{end}}
+        {{$task.Severity.SeverityDisplayName}}
+      </span>
+    </div>
+
+    <!-- Deadline -->
+    <div class="card">
+      <h3 style="font-size:0.875rem; margin-bottom:12px; color:var(--text-muted);">DEADLINE</h3>
+      {{if $task.Deadline}}
+      <span style="font-size:0.875rem; font-weight:500;">📅 {{$task.Deadline.Format "Jan 2, 2006"}}</span>
+      {{else}}
+      <span style="font-size:0.875rem; color:var(--text-muted);">No deadline set</span>
+      {{end}}
+    </div>
+
+    <!-- Project Info -->
+    <div class="card">
+      <h3 style="font-size:0.875rem; margin-bottom:12px; color:var(--text-muted);">PROJECT</h3>
+      <a href="/projects/{{$project.ID.Hex}}" style="font-weight:500; font-size:0.875rem;">{{$project.ProjectName}}</a>
+      <p class="text-xs text-muted" style="margin-top:4px;">{{$project.ClientName}}</p>
+    </div>
+
+    <!-- Assignee -->
+    <div class="card">
+      <h3 style="font-size:0.875rem; margin-bottom:12px; color:var(--text-muted);">ASSIGNEE</h3>
+      {{if .Assignee.Name}}
+      <div style="display:flex; align-items:center; gap:8px;">
+        <div class="user-avatar">{{slice .Assignee.Name 0 1}}</div>
+        <div>
+          <div class="text-sm font-medium">{{.Assignee.Name}}</div>
+          <div class="text-xs text-muted">{{.Assignee.Role.RoleDisplayName}}</div>
+        </div>
+      </div>
+      {{else}}
+      <p class="text-sm text-muted">Unassigned</p>
+      {{end}}
+    </div>
+
+    <!-- Timestamps -->
+    <div class="card">
+      <h3 style="font-size:0.875rem; margin-bottom:12px; color:var(--text-muted);">TIMESTAMPS</h3>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <div>
+          <div class="text-xs text-muted">Created</div>
+          <div class="text-sm">{{$task.CreatedAt.Format "Jan 2, 2006 15:04"}}</div>
+        </div>
+        <div>
+          <div class="text-xs text-muted">Last Updated</div>
+          <div class="text-sm">{{$task.UpdatedAt.Format "Jan 2, 2006 15:04"}}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Danger Zone -->
+    {{if or (eq $user.Role "admin") (eq $user.Role "senior_architect")}}
+    <div class="card" style="border-color:rgba(239,68,68,0.2);">
+      <h3 style="font-size:0.875rem; margin-bottom:12px; color:var(--accent-red);">DANGER ZONE</h3>
+      <form method="POST" action="/tasks/{{$task.ID.Hex}}/delete" id="delete-task-form"
+        onsubmit="return confirm('Delete this task permanently?')">
+        <button type="submit" class="btn btn-danger w-full btn-sm" id="delete-task-btn">Delete Task</button>
+      </form>
+    </div>
+    {{end}}
+  </div>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script>
+function addTaskGDriveLink() {
+  const row = document.createElement('div');
+  row.style.cssText = 'display:grid;grid-template-columns:1fr auto;gap:8px;';
+  row.innerHTML = `
+    <input type="url" name="gdrive_file_links" class="form-control" placeholder="https://drive.google.com/...">
+    <button type="button" class="btn btn-ghost btn-sm" onclick="this.closest('div').remove()">✕</button>
+  `;
+  document.getElementById('task-gdrive-links').appendChild(row);
+}
+
+// Auto-scroll to comments section if hash present
+if (window.location.hash === '#comments') {
+  document.getElementById('comments')?.scrollIntoView({ behavior: 'smooth' });
+}
+</script>
+{{end}}

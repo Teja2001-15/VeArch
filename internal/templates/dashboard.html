@@ -1,0 +1,70 @@
+{{template "base" .}}
+
+{{define "content"}}
+{{$user := .CurrentUser}}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Dashboard</h1>
+    <p class="page-subtitle">Welcome back, {{$user.Name}}</p>
+  </div>
+  {{if or (eq $user.Role "admin") (eq $user.Role "senior_architect")}}
+  <a href="/projects/new" class="btn btn-primary" id="new-project-btn">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    New Project
+  </a>
+  {{end}}
+</div>
+
+<!-- Stat Cards (clickable) -->
+<div class="stats-grid">
+  <a href="/projects?sort=date_desc" class="stat-card blue" id="stat-active-projects" style="text-decoration:none; cursor:pointer;">
+    <div class="stat-icon blue">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M2 7a2 2 0 0 1 2-2h4l2 3h9a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2z"/></svg>
+    </div>
+    <div>
+      <div class="stat-value">{{.ProjectCount}}</div>
+      <div class="stat-label">Active Projects</div>
+    </div>
+    <div style="margin-left:auto; opacity:0.4; font-size:1rem;">→</div>
+  </a>
+
+  <a href="/projects?sort=date_desc" class="stat-card amber" id="stat-total-tasks" style="text-decoration:none; cursor:pointer;">
+    <div class="stat-icon amber">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    </div>
+    <div>
+      <div class="stat-value">{{.TaskCount}}</div>
+      <div class="stat-label">Total Tasks</div>
+    </div>
+    <div style="margin-left:auto; opacity:0.4; font-size:1rem;">→</div>
+  </a>
+
+  <a href="/projects?sort=date_desc" class="stat-card green" id="stat-awaiting-approval" style="text-decoration:none; cursor:pointer; --accent: var(--accent-amber);">
+    <div class="stat-icon" style="background:rgba(245,158,11,0.15); color:var(--accent-amber)">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    </div>
+    <div>
+      <div class="stat-value">{{.PendingCount}}</div>
+      <div class="stat-label">Awaiting Approval</div>
+    </div>
+    <div style="margin-left:auto; opacity:0.4; font-size:1rem;">→</div>
+  </a>
+</div>
+
+<!-- Quick Link to Projects -->
+<div class="card">
+  <div class="flex items-center justify-between mb-4" style="margin-bottom:16px;">
+    <h2 style="font-size:1rem;">Your Projects</h2>
+    <a href="/projects" class="btn btn-ghost btn-sm">View all →</a>
+  </div>
+  <p class="text-sm text-muted">
+    Manage your architecture projects, assign team members, and track tasks on the Kanban board.
+  </p>
+  <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
+    <a href="/projects" class="btn btn-secondary btn-sm" id="go-projects-btn">Browse Projects</a>
+    {{if or (eq $user.Role "admin") (eq $user.Role "senior_architect")}}
+    <a href="/projects/new" class="btn btn-primary btn-sm" id="quick-new-project-btn">+ New Project</a>
+    {{end}}
+  </div>
+</div>
+{{end}}

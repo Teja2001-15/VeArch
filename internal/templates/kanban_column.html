@@ -1,0 +1,43 @@
+{{define "kanban_column.html"}}
+{{$status := .Status}}
+{{$tasks := .Tasks}}
+{{$user := .CurrentUser}}
+{{$project := .Project}}
+{{$userMap := .UserMap}}
+<div class="kanban-column col-{{$status.StatusClass}}" id="col-{{$status.StatusClass}}" data-status="{{$status}}">
+  <div class="column-header">
+    <div class="column-title">
+      <div class="column-dot"></div>
+      {{$status.StatusDisplayName}}
+    </div>
+    <span class="column-count">{{len $tasks}}</span>
+  </div>
+  <div class="task-list" id="task-list-{{$status.StatusClass}}" data-status="{{$status}}">
+    {{range $tasks}}
+    {{$assignee := index $userMap .AssigneeID.Hex}}
+    <div class="task-card status-{{.Status.StatusClass}}" data-task-id="{{.ID.Hex}}" id="task-card-{{.ID.Hex}}">
+      <div class="task-title">{{.Title}}</div>
+      <div class="task-meta">
+        <div class="task-assignee">
+          {{if $assignee.Name}}
+          <div class="avatar-xs">{{slice $assignee.Name 0 1}}</div>
+          <span>{{$assignee.Name}}</span>
+          {{else}}
+          <span style="color:var(--text-faint);">Unassigned</span>
+          {{end}}
+        </div>
+        <a href="/tasks/{{.ID.Hex}}" class="task-view-btn" id="view-task-{{.ID.Hex}}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          View
+        </a>
+      </div>
+    </div>
+    {{else}}
+    <div class="empty-state" style="padding:20px 10px;">
+      <div style="font-size:1.5rem;opacity:0.3;">&#9723;</div>
+      <span class="text-xs" style="color:var(--text-faint);">Drop cards here</span>
+    </div>
+    {{end}}
+  </div>
+</div>
+{{end}}

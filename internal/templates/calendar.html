@@ -1,0 +1,36 @@
+{{template "base" .}}
+
+{{define "content"}}
+<div class="page-header calendar-page-header">
+  <div>
+    <h1 class="page-title">Calendar</h1>
+    <p class="page-subtitle">Deadlines for {{.MonthName}} {{.Year}}</p>
+  </div>
+  <div class="calendar-navigation" aria-label="Calendar navigation">
+    <a class="btn btn-secondary btn-sm" href="/calendar?month={{.PreviousMonth}}" aria-label="Previous month">← <span>Previous</span></a>
+    <a class="btn btn-ghost btn-sm" href="/calendar">Today</a>
+    <a class="btn btn-secondary btn-sm" href="/calendar?month={{.NextMonth}}" aria-label="Next month"><span>Next</span> →</a>
+  </div>
+</div>
+
+<section class="calendar card" aria-label="{{.MonthName}} {{.Year}} task deadlines">
+  <div class="calendar-weekdays" aria-hidden="true"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
+  <div class="calendar-grid">
+    {{range .Days}}
+    <article class="calendar-day {{if not .IsCurrentMonth}}calendar-day-adjacent{{end}} {{if .IsToday}}calendar-day-today{{end}}">
+      <time class="calendar-date" datetime="{{.Date}}">{{.DayNumber}}</time>
+      <div class="calendar-tasks">
+        {{range .Tasks}}
+        <a class="calendar-task status-{{.Status.StatusClass}}" href="/tasks/{{.ID.Hex}}" title="{{.Title}}">
+          <span class="calendar-task-title">{{.Title}}</span>
+          <span class="calendar-task-meta">{{if eq .Severity "critical"}}<span class="calendar-priority critical" title="Critical severity">●</span>{{else if eq .Severity "high"}}<span class="calendar-priority high" title="High severity">●</span>{{end}}<span class="truncate">{{(index $.ProjectMap .ProjectID.Hex).ProjectName}}</span></span>
+        </a>
+        {{end}}
+      </div>
+    </article>
+    {{end}}
+  </div>
+</section>
+{{end}}
+
+{{define "scripts"}}{{end}}

@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: arch-erp
+    runtime: docker
+    dockerfilePath: Dockerfile
+    plan: free
+    healthCheckPath: /login
+    envVars:
+      - key: MONGO_URI
+        sync: false
+      - key: MONGO_DB
+        value: arch_erp
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRY_HOURS
+        value: "24"
+      - key: ADMIN_USER_ID
+        value: admin
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: ADMIN_NAME
+        value: System Administrator
+      - key: ADMIN_EMAIL
+        value: admin@archfirm.com
+      - key: APP_NAME
+        value: Arch ERP
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM
+        value: notifications@archfirm.com

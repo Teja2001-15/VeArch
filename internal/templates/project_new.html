@@ -1,0 +1,91 @@
+{{template "base" .}}
+
+{{define "content"}}
+{{$user := .CurrentUser}}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">New Project</h1>
+    <p class="page-subtitle">Fill in the project details below</p>
+  </div>
+  <a href="/projects" class="btn btn-secondary" id="cancel-new-project-btn">Cancel</a>
+</div>
+
+{{if .Error}}
+<div class="alert alert-error" id="new-project-error">{{.Error}}</div>
+{{end}}
+
+<div class="card" style="max-width:720px;">
+  <form method="POST" action="/projects" id="new-project-form">
+    <div class="grid-2">
+      <div class="form-group">
+        <label class="form-label" for="project_name">Project Name *</label>
+        <input id="project_name" name="project_name" type="text" class="form-control" placeholder="City Library Renovation" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="client_name">Client Name *</label>
+        <input id="client_name" name="client_name" type="text" class="form-control" placeholder="Municipal Corporation" required>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="phase">Phase</label>
+      <select id="phase" name="phase" class="form-control">
+        <option value="discussion">Discussion</option>
+        <option value="ongoing">Ongoing</option>
+        <option value="completed">Completed</option>
+      </select>
+    </div>
+
+    <!-- Assigned Users -->
+    <div class="form-group">
+      <label class="form-label">Team Members</label>
+      <div style="display:flex; flex-direction:column; gap:8px; padding:12px; background:var(--bg-elevated); border:1px solid var(--border); border-radius:var(--radius-md); max-height:200px; overflow-y:auto;">
+        {{range .AllUsers}}
+        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; padding:4px 0;">
+          <input type="checkbox" name="assigned_users" value="{{.ID.Hex}}" id="user-{{.ID.Hex}}" style="accent-color:var(--accent-blue); width:15px; height:15px;">
+          <div class="user-avatar" style="width:24px;height:24px;font-size:0.625rem;">{{slice .Name 0 1}}</div>
+          <span class="text-sm">{{.Name}}</span>
+          <span class="badge badge-{{.Role}}" style="margin-left:auto;">{{.Role.RoleDisplayName}}</span>
+        </label>
+        {{end}}
+      </div>
+    </div>
+
+    <!-- GDrive Links -->
+    <div class="form-group">
+      <label class="form-label">Google Drive Links</label>
+      <div id="gdrive-links" class="gdrive-links">
+        <div class="gdrive-link-row">
+          <input type="text" name="gdrive_label" class="form-control" placeholder="Label (e.g. Floor Plans)">
+          <input type="url" name="gdrive_url" class="form-control" placeholder="https://drive.google.com/...">
+          <button type="button" class="btn btn-ghost btn-sm" onclick="this.closest('.gdrive-link-row').remove()" title="Remove">✕</button>
+        </div>
+      </div>
+      <button type="button" class="btn btn-ghost btn-sm mt-2" id="add-gdrive-btn" onclick="addGDriveRow()" style="margin-top:8px;">
+        + Add Link
+      </button>
+    </div>
+
+    <hr class="divider">
+    <div class="flex gap-2" style="justify-content:flex-end;">
+      <a href="/projects" class="btn btn-secondary">Cancel</a>
+      <button type="submit" class="btn btn-primary" id="create-project-submit-btn">Create Project</button>
+    </div>
+  </form>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script>
+function addGDriveRow() {
+  const row = document.createElement('div');
+  row.className = 'gdrive-link-row';
+  row.innerHTML = `
+    <input type="text"  name="gdrive_label" class="form-control" placeholder="Label">
+    <input type="url"   name="gdrive_url"   class="form-control" placeholder="https://drive.google.com/...">
+    <button type="button" class="btn btn-ghost btn-sm" onclick="this.closest('.gdrive-link-row').remove()" title="Remove">✕</button>
+  `;
+  document.getElementById('gdrive-links').appendChild(row);
+}
+</script>
+{{end}}

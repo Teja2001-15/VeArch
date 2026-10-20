@@ -1,0 +1,24 @@
+# Environment variables and secrets
+.env
+*.local
+
+# Logs
+*.log
+
+# Go build artifacts and binaries
+/arch_erp
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+test_build.exe
+
+# Go cache
+.gocache/
+
+# OS and Editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

@@ -1,0 +1,235 @@
+{{template "base" .}}
+
+{{define "content"}}
+{{$user := .CurrentUser}}
+{{$sort := .SortBy}}
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Projects</h1>
+    <p class="page-subtitle">All architecture projects in your workspace</p>
+  </div>
+  <div style="display:flex; gap:10px; align-items:center;">
+    <!-- Sort Control -->
+    <div style="position:relative;" id="sort-dropdown-wrapper">
+      <button class="btn btn-secondary btn-sm" id="sort-btn" onclick="toggleSortMenu()" style="display:flex;align-items:center;gap:6px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="14" y2="12"/><line x1="4" y1="18" x2="9" y2="18"/></svg>
+        Sort
+      </button>
+      <div id="sort-menu" style="display:none;position:absolute;right:0;top:calc(100% + 6px);background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:6px;min-width:180px;z-index:50;box-shadow:var(--shadow-lg);">
+        <a href="/projects?sort=date_desc" class="sort-option{{if or (eq $sort ``) (eq $sort `date_desc`)}} sort-active{{end}}">
+          📅 Newest First
+        </a>
+        <a href="/projects?sort=date_asc" class="sort-option{{if eq $sort `date_asc`}} sort-active{{end}}">
+          📅 Oldest First
+        </a>
+        <a href="/projects?sort=name" class="sort-option{{if eq $sort `name`}} sort-active{{end}}">
+          🔤 Name A–Z
+        </a>
+      </div>
+    </div>
+
+    {{if or (eq $user.Role "admin") (eq $user.Role "senior_architect")}}
+    <a href="/projects/new" class="btn btn-primary btn-sm" id="new-project-btn">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      New Project
+    </a>
+    {{end}}
+  </div>
+</div>
+
+{{if and (not .Ongoing) (not .Discussion) (not .Completed)}}
+<!-- Empty state -->
+<div class="card">
+  <div class="empty-state">
+    <div class="empty-state-icon">🏗️</div>
+    <h3 style="color:var(--text-muted);">No projects yet</h3>
+    <p class="empty-state-text">
+      {{if or (eq $user.Role "admin") (eq $user.Role "senior_architect")}}
+        Create your first project to get started.
+      {{else}}
+        You haven't been assigned to any projects yet.
+      {{end}}
+    </p>
+    {{if or (eq $user.Role "admin") (eq $user.Role "senior_architect")}}
+    <a href="/projects/new" class="btn btn-primary mt-4" id="first-project-btn">Create First Project</a>
+    {{end}}
+  </div>
+</div>
+{{else}}
+
+<!-- ── Section: Active ───────────────────────────────────────── -->
+<div class="project-section" id="section-active">
+  <div class="project-section-header" onclick="toggleSection('active')">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="width:10px;height:10px;border-radius:50%;background:#22c55e;"></div>
+      <span class="project-section-title">Active</span>
+      <span class="column-count">{{len .Ongoing}}</span>
+    </div>
+    <svg id="chevron-active" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="transition:transform 0.2s;"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+  <div class="project-section-body" id="body-active">
+    {{if .Ongoing}}
+    <div class="project-grid">
+      {{range .Ongoing}}
+      <a href="/projects/{{.ID.Hex}}" class="project-card" id="project-card-{{.ID.Hex}}">
+        <div class="project-card-header">
+          <div>
+            <div class="project-name">{{.ProjectName}}</div>
+            <div class="project-client text-muted">{{.ClientName}}</div>
+          </div>
+          <span class="badge badge-{{.Phase.PhaseClass}}">{{.Phase.PhaseDisplayName}}</span>
+        </div>
+        <div class="project-meta">
+          <span class="text-xs text-muted">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;margin-right:3px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            {{len .AssignedUsers}} member{{if ne (len .AssignedUsers) 1}}s{{end}}
+          </span>
+          {{if .GDriveLinks}}
+          <span class="text-xs text-muted">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;margin-right:3px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            {{len .GDriveLinks}} doc{{if ne (len .GDriveLinks) 1}}s{{end}}
+          </span>
+          {{end}}
+        </div>
+        <div class="text-xs" style="color:var(--text-faint);">Created {{.CreatedAt.Format "Jan 2, 2006"}}</div>
+      </a>
+      {{end}}
+    </div>
+    {{else}}
+    <p class="text-sm text-muted" style="padding:12px 0;">No active projects.</p>
+    {{end}}
+  </div>
+</div>
+
+<!-- ── Section: In Discussion ────────────────────────────────── -->
+<div class="project-section" id="section-discussion">
+  <div class="project-section-header" onclick="toggleSection('discussion')">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="width:10px;height:10px;border-radius:50%;background:#f59e0b;"></div>
+      <span class="project-section-title">In Discussion</span>
+      <span class="column-count">{{len .Discussion}}</span>
+    </div>
+    <svg id="chevron-discussion" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="transition:transform 0.2s;"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+  <div class="project-section-body" id="body-discussion">
+    {{if .Discussion}}
+    <div class="project-grid">
+      {{range .Discussion}}
+      <a href="/projects/{{.ID.Hex}}" class="project-card" id="project-card-{{.ID.Hex}}">
+        <div class="project-card-header">
+          <div>
+            <div class="project-name">{{.ProjectName}}</div>
+            <div class="project-client text-muted">{{.ClientName}}</div>
+          </div>
+          <span class="badge badge-{{.Phase.PhaseClass}}">{{.Phase.PhaseDisplayName}}</span>
+        </div>
+        <div class="project-meta">
+          <span class="text-xs text-muted">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;margin-right:3px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            {{len .AssignedUsers}} member{{if ne (len .AssignedUsers) 1}}s{{end}}
+          </span>
+          {{if .GDriveLinks}}
+          <span class="text-xs text-muted">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;margin-right:3px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            {{len .GDriveLinks}} doc{{if ne (len .GDriveLinks) 1}}s{{end}}
+          </span>
+          {{end}}
+        </div>
+        <div class="text-xs" style="color:var(--text-faint);">Created {{.CreatedAt.Format "Jan 2, 2006"}}</div>
+      </a>
+      {{end}}
+    </div>
+    {{else}}
+    <p class="text-sm text-muted" style="padding:12px 0;">No projects in discussion.</p>
+    {{end}}
+  </div>
+</div>
+
+<!-- ── Section: Completed ────────────────────────────────────── -->
+<div class="project-section" id="section-completed">
+  <div class="project-section-header" onclick="toggleSection('completed')">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="width:10px;height:10px;border-radius:50%;background:#6366f1;"></div>
+      <span class="project-section-title">Completed</span>
+      <span class="column-count">{{len .Completed}}</span>
+    </div>
+    <svg id="chevron-completed" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="transition:transform 0.2s;"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+  <div class="project-section-body" id="body-completed">
+    {{if .Completed}}
+    <div class="project-grid">
+      {{range .Completed}}
+      <a href="/projects/{{.ID.Hex}}" class="project-card" id="project-card-{{.ID.Hex}}">
+        <div class="project-card-header">
+          <div>
+            <div class="project-name">{{.ProjectName}}</div>
+            <div class="project-client text-muted">{{.ClientName}}</div>
+          </div>
+          <span class="badge badge-{{.Phase.PhaseClass}}">{{.Phase.PhaseDisplayName}}</span>
+        </div>
+        <div class="project-meta">
+          <span class="text-xs text-muted">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;margin-right:3px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            {{len .AssignedUsers}} member{{if ne (len .AssignedUsers) 1}}s{{end}}
+          </span>
+          {{if .GDriveLinks}}
+          <span class="text-xs text-muted">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="display:inline;vertical-align:middle;margin-right:3px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            {{len .GDriveLinks}} doc{{if ne (len .GDriveLinks) 1}}s{{end}}
+          </span>
+          {{end}}
+        </div>
+        <div class="text-xs" style="color:var(--text-faint);">Created {{.CreatedAt.Format "Jan 2, 2006"}}</div>
+      </a>
+      {{end}}
+    </div>
+    {{else}}
+    <p class="text-sm text-muted" style="padding:12px 0;">No completed projects.</p>
+    {{end}}
+  </div>
+</div>
+
+{{end}}
+{{end}}
+
+{{define "scripts"}}
+<script>
+// Sort dropdown
+window.toggleSortMenu = function() {
+  const m = document.getElementById('sort-menu');
+  m.style.display = m.style.display === 'none' ? 'block' : 'none';
+};
+document.addEventListener('click', e => {
+  const wrapper = document.getElementById('sort-dropdown-wrapper');
+  if (wrapper && !wrapper.contains(e.target)) {
+    const m = document.getElementById('sort-menu');
+    if (m) m.style.display = 'none';
+  }
+});
+
+// Collapsible sections
+const sectionState = { active: true, discussion: true, completed: false };
+
+function toggleSection(key) {
+  sectionState[key] = !sectionState[key];
+  const body    = document.getElementById('body-' + key);
+  const chevron = document.getElementById('chevron-' + key);
+  if (sectionState[key]) {
+    body.style.display = '';
+    chevron.style.transform = 'rotate(0deg)';
+  } else {
+    body.style.display = 'none';
+    chevron.style.transform = 'rotate(-90deg)';
+  }
+}
+
+// Init: completed collapsed by default
+document.addEventListener('DOMContentLoaded', () => {
+  const bodyCompleted = document.getElementById('body-completed');
+  const chevronCompleted = document.getElementById('chevron-completed');
+  if (bodyCompleted) { bodyCompleted.style.display = 'none'; }
+  if (chevronCompleted) { chevronCompleted.style.transform = 'rotate(-90deg)'; }
+});
+</script>
+{{end}}

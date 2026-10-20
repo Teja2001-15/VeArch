@@ -1,0 +1,90 @@
+{{template "base" .}}
+
+{{define "content"}}
+{{$user := .CurrentUser}}
+{{$project := .Project}}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Edit Project</h1>
+    <p class="page-subtitle">{{$project.ProjectName}}</p>
+  </div>
+  <a href="/projects/{{$project.ID.Hex}}" class="btn btn-secondary" id="cancel-edit-btn">Cancel</a>
+</div>
+
+{{if .Error}}<div class="alert alert-error" id="edit-project-error">{{.Error}}</div>{{end}}
+
+<div class="card" style="max-width:720px;">
+  <form method="POST" action="/projects/{{$project.ID.Hex}}/update" id="edit-project-form">
+    <div class="grid-2">
+      <div class="form-group">
+        <label class="form-label" for="edit-project-name">Project Name *</label>
+        <input id="edit-project-name" name="project_name" type="text" class="form-control" value="{{$project.ProjectName}}" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="edit-client-name">Client Name *</label>
+        <input id="edit-client-name" name="client_name" type="text" class="form-control" value="{{$project.ClientName}}" required>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="edit-phase">Phase</label>
+      <select id="edit-phase" name="phase" class="form-control">
+        <option value="discussion" {{if eq $project.Phase "discussion"}}selected{{end}}>Discussion</option>
+        <option value="ongoing"    {{if eq $project.Phase "ongoing"}}selected{{end}}>Ongoing</option>
+        <option value="completed"  {{if eq $project.Phase "completed"}}selected{{end}}>Completed</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Team Members</label>
+      <div style="display:flex; flex-direction:column; gap:8px; padding:12px; background:var(--bg-elevated); border:1px solid var(--border); border-radius:var(--radius-md); max-height:200px; overflow-y:auto;">
+        {{range .AllUsers}}
+        <label style="display:flex; align-items:center; gap:10px; cursor:pointer; padding:4px 0;">
+          <input type="checkbox" name="assigned_users" value="{{.ID.Hex}}" id="edit-user-{{.ID.Hex}}"
+            {{if index $.AssignedSet .ID.Hex}}checked{{end}}
+            style="accent-color:var(--accent-blue); width:15px; height:15px;">
+          <div class="user-avatar" style="width:24px;height:24px;font-size:0.625rem;">{{slice .Name 0 1}}</div>
+          <span class="text-sm">{{.Name}}</span>
+          <span class="badge badge-{{.Role}}" style="margin-left:auto;">{{.Role.RoleDisplayName}}</span>
+        </label>
+        {{end}}
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Google Drive Links</label>
+      <div id="edit-gdrive-links" class="gdrive-links">
+        {{range $project.GDriveLinks}}
+        <div class="gdrive-link-row">
+          <input type="text" name="gdrive_label" class="form-control" value="{{.Label}}" placeholder="Label">
+          <input type="url"  name="gdrive_url"   class="form-control" value="{{.URL}}"   placeholder="https://drive.google.com/...">
+          <button type="button" class="btn btn-ghost btn-sm" onclick="this.closest('.gdrive-link-row').remove()">✕</button>
+        </div>
+        {{end}}
+      </div>
+      <button type="button" class="btn btn-ghost btn-sm mt-2" id="add-edit-gdrive-btn" onclick="addGDriveRow()" style="margin-top:8px;">+ Add Link</button>
+    </div>
+
+    <hr class="divider">
+    <div style="display:flex; justify-content:flex-end; gap:10px;">
+      <a href="/projects/{{$project.ID.Hex}}" class="btn btn-secondary">Cancel</a>
+      <button type="submit" class="btn btn-primary" id="save-project-btn">Save Changes</button>
+    </div>
+  </form>
+</div>
+{{end}}
+
+{{define "scripts"}}
+<script>
+function addGDriveRow() {
+  const row = document.createElement('div');
+  row.className = 'gdrive-link-row';
+  row.innerHTML = `
+    <input type="text" name="gdrive_label" class="form-control" placeholder="Label">
+    <input type="url"  name="gdrive_url"   class="form-control" placeholder="https://drive.google.com/...">
+    <button type="button" class="btn btn-ghost btn-sm" onclick="this.closest('.gdrive-link-row').remove()">✕</button>
+  `;
+  document.getElementById('edit-gdrive-links').appendChild(row);
+}
+</script>
+{{end}}
